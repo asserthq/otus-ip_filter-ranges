@@ -6,8 +6,8 @@
 #include <algorithm>
 
 #include <range/v3/algorithm.hpp>
+#include <range/v3/view.hpp>
 #include <range/v3/iterator.hpp>
-#include <range/v3/iterator_range.hpp>
 
 // ("",  '.') -> [""]
 // ("11", '.') -> ["11"]
@@ -24,40 +24,14 @@ template<std::size_t startIndex, std::size_t endIndex>
 auto ipLexPartialGreaterComp(const IpType& lhs, const IpType& rhs) 
 {
     return ranges::lexicographical_compare(
-        ranges::subrange(lhs.cbegin() + startIndex, lhs.cbegin() + endIndex),
-        ranges::subrange(rhs.cbegin() + startIndex, rhs.cbegin() + endIndex),
+        lhs | ranges::views::drop(startIndex) | ranges::views::take(endIndex - startIndex),
+        rhs | ranges::views::drop(startIndex) | ranges::views::take(endIndex - startIndex),
         [](auto&& lhs, auto&& rhs) {
             return ranges::greater{}(std::stoi(lhs), std::stoi(rhs));
         });
-
-    //return std::lexicographical_compare(
-    //     lhs.cbegin() + startIndex, lhs.cbegin() + endIndex, 
-    //     rhs.cbegin() + startIndex, rhs.cbegin() + endIndex,
-    //     [](auto&& lhs, auto&& rhs) {
-    //         return std::greater{}(std::stoi(lhs), std::stoi(rhs));
-    //     });
 }
 
 auto ipLexGreaterComp = ipLexPartialGreaterComp<0, 4>;
-
-auto split(const std::string &str, char d)
-{
-    auto r = IpType{};
-
-    auto start = std::string::size_type{};
-    auto stop = str.find_first_of(d);
-    while(stop != std::string::npos)
-    {
-        r.push_back(str.substr(start, stop - start));
-
-        start = stop + 1;
-        stop = str.find_first_of(d, start);
-    }
-
-    r.push_back(str.substr(start));
-
-    return r;
-}
 
 auto print(const IpPoolType& ip_pool)
 {
@@ -120,8 +94,8 @@ int main(int argc, char const *argv[])
 
         for(std::string line; std::getline(std::cin, line);)
         {
-            auto v = split(line, '\t');
-            ip_pool.push_back(split(v.at(0), '.'));
+            auto v = ranges::views::split(line, '\t') | ranges::to<std::vector<std::string>>();
+            ip_pool.push_back(ranges::views::split(v.at(0), '.') | ranges::to<std::vector<std::string>>());
         }
 
         // Reverse lexicographically sort
